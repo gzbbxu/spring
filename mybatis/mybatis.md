@@ -2071,7 +2071,229 @@ sqlSessin对象的缓存。但我们执行查询后，查询的结果会同时�
 
 
 
- 
+ crud 查询
+
+```java
+public interface IUserDao {
+
+    /**
+     * 查询所有用户
+     * @return
+     */
+    @Select("select * from user")
+    List<User> findAll();
+
+    /**
+     * 保存用户
+     * @param user
+     */
+    @Insert("insert into user(username,address,sex,birthday)values(#{username},#{address},#{sex},#{birthday})")
+    void saveUser(User user);
+
+    /**
+     * 更新用户
+     * @param user
+     */
+    @Update("update user set username=#{username},sex=#{sex},birthday=#{birthday},address=#{address} where id=#{id}")
+    void updateUser(User user);
+
+    /**
+     * 删除用户
+     * @param userId
+     */
+    @Delete("delete from user where id=#{id} ")
+    void deleteUser(Integer userId);
+
+    /**
+     * 根据id查询用户
+     * @param userId
+     * @return
+     */
+    @Select("select * from user  where id=#{id} ")
+    User findById(Integer userId);
+
+    /**
+     * 根据用户名称模糊查询
+     * @param username
+     * @return
+     */
+//    @Select("select * from user where username like #{username} ")
+    @Select("select * from user where username like '%${value}%' ")
+    List<User> findUserByName(String username);
+
+    /**
+     * 查询总用户数量
+     * @return
+     */
+    @Select("select count(*) from user ")
+    int findTotalUser();
+}
+
+```
+
+
+
+多表查询
+
+```java
+@CacheNamespace(blocking = true)
+public interface IUserDao {
+
+    /**
+     * 查询所有用户
+     * @return
+     */
+    @Select("select * from user")
+    @Results(id="userMap",value={
+            @Result(id=true,column = "id",property = "userId"),
+            @Result(column = "username",property = "userName"),
+            @Result(column = "address",property = "userAddress"),
+            @Result(column = "sex",property = "userSex"),
+            @Result(column = "birthday",property = "userBirthday"),
+            @Result(property = "accounts",column = "id",
+                    many = @Many(select = "com.itheima.dao.IAccountDao.findAccountByUid",
+                                fetchType = FetchType.LAZY))
+    })
+    List<User> findAll();
+
+    /**
+     * 根据id查询用户
+     * @param userId
+     * @return
+     */
+    @Select("select * from user  where id=#{id} ")
+    @ResultMap("userMap")
+    User findById(Integer userId);
+
+    /**
+     * 根据用户名称模糊查询
+     * @param username
+     * @return
+     */
+    @Select("select * from user where username like #{username} ")
+    @ResultMap("userMap")
+    List<User> findUserByName(String username);
+
+
+}
+
+```
+
+
+
+```java
+public interface IAccountDao {
+
+    /**
+     * 查询所有账户，并且获取每个账户所属的用户信息
+     * @return
+     */
+    @Select("select * from account")
+    @Results(id="accountMap",value = {
+            @Result(id=true,column = "id",property = "id"),
+            @Result(column = "uid",property = "uid"),
+            @Result(column = "money",property = "money"),
+            @Result(property = "user",column = "uid",one=@One(select="com.itheima.dao.IUserDao.findById",fetchType= FetchType.EAGER))
+    })
+    List<Account> findAll();
+
+    /**
+     * 根据用户id查询账户信息
+     * @param userId
+     * @return
+     */
+    @Select("select * from account where uid = #{userId}")
+    List<Account> findAccountByUid(Integer userId);
+}
+
+```
+
+#### 用注解实现复杂关系映射开发
+
+实现复杂关系映射之前我们可以在映射文件中通过配置<resultMap>来实现，在使用注解开发时我们需要借
+助@Results 注解，@Result 注解，@One 注解，@Many 注解
+
+```
+@Results  注解
+代替的是标签<resultMap>
+该注解中可以使用单个@Result 注解，也可以使用@Result 集合
+@Results（{@Result（），@Result（）}）或@Results（@Result（））
+@Resutl 注解
+代替了 <id> 标签和<result> 标签
+@Result  中  属性介绍：
+id 是否是主键字段
+column 数据库的列名
+property 需要装配的属性名
+one 需要使用的@One 注解（@Result（one=@One）（）））
+many 需要使用的@Many 注解（@Result（many=@many）（）））
+@One  注解（一对一）
+代替了<assocation> 标签，是多表查询的关键，在注解中用来指定子查询返回单一对象。
+@One  注解属性介绍：
+select 指定用的 来多表查询的 sqlmapper
+fetchType 会覆盖全局的配置参数 lazyLoadingEnabled。。
+使用格式：
+@Result(column=" ",property="",one=@One(select=""))
+@Many  注解（多对一）
+代替了<Collection> 标签, 是是多表查询的关键，在注解中用来指定子查询返回对象集合。
+注意：聚集元素用来处理“一对多”的关系。需要指定映射的 Java 实体类的属性，属性的 javaType
+（一般为 ArrayList）但是注解中可以不定义；
+使用格式：
+@Result(property="",column="",many=@Many(select=""))
+```
+
+
+
+延迟加载
+
+```java
+public interface IAccountDao {
+/**
+* 查询所有账户，采用延迟加载的方式查询账户的所属用户
+* @return
+*/
+@Select("select * from account")
+@Results(id="accountMap",
+value= {
+@Result(id=true,column="id",property="id"), 
+@Result(column="uid",property="uid"),
+@Result(column="money",property="money"),
+@Result(column="uid",
+property="user",
+one=@One(select="com.itheima.dao.IUserDao.findById",
+fetchType=FetchType.LAZY)
+)
+})
+List<Account> findAll()
+```
+
+
+
+#### mybatis  基于注解的二级缓存
+
+在 在 SqlMapConfig  中开启二级缓存支持
+
+```xml
+<!-- 配置二级缓存 -->
+<settings>
+<!-- 开启二级缓存的支持 -->
+<setting name="cacheEnabled" value="true"/>
+</settings>
+```
+
+在持久层接口中使用注解配置二级缓存
+
+```java
+/**
+*
+* <p>Title: IUserDao</p>
+* <p>Description: 用户的持久层接口</p>
+* 
+*/
+@CacheNamespace(blocking=true)//mybatis 基于注解方式实现配置二级缓存
+public interface IUserDao {}
+```
+
+
 
 
 
