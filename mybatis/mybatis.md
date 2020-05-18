@@ -369,9 +369,9 @@ public class UserDaoImpl implements IUserDao {
 
 
 使用要求：
-1、持久层接口和持久层接口的映射配置必须在相同的包下
-2、持久层映射配置中 mapper 标签的 namespace 属性取值必须是持久层接口的全限定类名
-3、SQL 语句的配置标签<select>,<insert>,<delete>,<update>的 id 属性必须和持久层接口的
+	1、持久层接口和持久层接口的映射配置必须在相同的包下
+	2、持久层映射配置中 mapper 标签的 namespace 属性取值必须是持久层接口的全限定类名
+	3、SQL 语句的配置标签<select>,<insert>,<delete>,<update>的 id 属性必须和持久层接口的
 方法名相同
 
 #### 据根据ID 查询
@@ -410,7 +410,8 @@ public class UserDaoImpl implements IUserDao {
    **#{} 中内容的写法：**
    由于数据类型是基本类型，并且只有一个，所以此处可以随意写。
 
-3. 
+
+
 
 #### 保存操作
 
@@ -1715,7 +1716,7 @@ sqlMapConfig
 
 
 
-```java
+```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 导入约束 -->
 <!DOCTYPE configuration
